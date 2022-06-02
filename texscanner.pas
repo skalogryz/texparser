@@ -137,13 +137,14 @@ function TTexScanner.Next: Boolean;
 var
   done: Boolean;
 begin
+  txt := '';
   token := ttEof;
   Result := false;
   done := false;
 
   while not done do begin
     SkipWhile(buf, idx, WhiteSpace);
-    if idx>=length(buf) then Exit;
+    if idx>length(buf) then Exit;
 
     if buf[idx]=Comment then begin
       SkipTo(buf, idx, EolnChars);
