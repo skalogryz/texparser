@@ -17,6 +17,7 @@ type
   { TTexEntity }
 
   TTexEntity = class(TObject)
+  public
     entType: TTexEntityType;  // the actual type
     text : string;     // driven by the entType
     next : TTexEntity; // the next entry passing sub object containedin {}. can be null
@@ -30,6 +31,7 @@ type
 
     function GetCmd: string;
     function ArgText(const argNum: integer; const def: string=''): string;
+    function OptText(const optNum: integer; const def: string=''): string;
   end;
 
 
@@ -254,20 +256,30 @@ begin
     Result := '';
 end;
 
-function TTexEntity.ArgText(const argNum: integer; const def: string): string;
+function GetTextFromSrc(src: TList; const argNum: integer; const def: string): string;
 var
   te : TTexEntity;
 begin
-  if not Assigned(args) or (argNum<0) or (argNum>=args.Count) then
+  if not Assigned(src) or (argNum<0) or (argNum>=src.Count) then
   begin
     Result := def;
     Exit;
   end;
-  te := TTexEntity(args[argNum]);
+  te := TTexEntity(src[argNum]);
   if (te.entType = tetText) then
     Result := te.text
   else
     Result := def;
+end;
+
+function TTexEntity.ArgText(const argNum: integer; const def: string): string;
+begin
+  Result := GetTextFromSrc(args, argNum, def);
+end;
+
+function TTexEntity.OptText(const optNum: integer; const def: string=''): string;
+begin
+  Result := GetTextFromSrc(opts, optNum, def);
 end;
 
 function isCmd(e: TTexEntity; const nm: string): Boolean;
