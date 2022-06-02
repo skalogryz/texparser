@@ -1,4 +1,4 @@
-unit texformat;
+unit TexFormat;
 
 {$mode objfpc}{$H+}
 
