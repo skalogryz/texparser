@@ -1,4 +1,4 @@
-unit texparser;
+unit TexParser;
 
 interface
 
@@ -7,24 +7,40 @@ uses
   texScanner;
 
 type
-  TTexEntityType = (tetCommand, tetLineBreak, tetText, tetSubObj);
+  TTexEntityType = (
+    tetCommand,   // .text - contains the command. without "/"
+    tetLineBreak, // .text - is empty. Only generated for an empty line
+    tetText,      // .text - the actual text
+    tetSubObj     // - the "sub" indicates the sequence contained within {}
+  );
 
   { TTexEntity }
 
   TTexEntity = class(TObject)
-    entType: TTexEntityType;
-    text : string;
-    next : TTexEntity;
-    sub  : TTexEntity;
-    opts : TList; // of TTexEntiry
-    args : TList; // of TTexEntiry
+    entType: TTexEntityType;  // the actual type
+    text : string;     // driven by the entType
+    next : TTexEntity; // the next entry passing sub object containedin {}. can be null
+    sub  : TTexEntity; // the sub entry (the sequence withing {})
+
+    // used for commands only. for others might be nil
+    opts : TList;
+    args : TList;
     constructor Create(AType: TTexEntityType);
     destructor Destroy; override;
 
+    function GetCmd: string;
     function ArgText(const argNum: integer; const def: string=''): string;
   end;
 
 
+// if flag oneCommand is set, then the returned entity would either contain:
+// * a single command
+// * a text sequence until the first line break or a command encountered
+// if flag is set to false, then the sequence is read until the closing curly braces OR closeChar is encountered
+//
+// oneCommand set to false, is used to parse arguments (either {} or [])
+//
+// (in either case, End-of-file is respected
 function ParseNextEntity(sc: TTexScanner; oneCommand: Boolean; closeChar : char = #0): TTexEntity;
 
 type
@@ -32,6 +48,12 @@ type
 
 function isBeginVerbatim(e: TTexEntity): Boolean;
 function SkipVerbating(sc: TTexScanner): string;
+
+// returns true, if the specified the command of the "nm" name
+function isCmd(e: TTexEntity; const nm: string): Boolean;
+// returns the command of the command entity. If it's nil or entity
+// other than command, returns the empty string
+function GetCmd(e: TTexEntity): string;
 
 implementation
 
@@ -192,10 +214,30 @@ begin
 end;
 
 destructor TTexEntity.Destroy;
+var
+  i : integer;
 begin
-  opts.Free;
-  args.Free;
+  if Assigned(opts) then begin
+    for i:=0 to opts.Count-1 do
+      TObject(opts[i]).Free;
+    opts.Free;
+  end;
+  if Assigned(args) then begin
+    for i:=0 to args.Count-1 do
+      TObject(args[i]).Free;
+    args.Free;
+  end;
+  next.Free;
+  sub.Free;
   inherited Destroy;
+end;
+
+function TTexEntity.GetCmd: string;
+begin
+  if (entType = tetCommand) then
+    Result := text
+  else
+    Result := '';
 end;
 
 function TTexEntity.ArgText(const argNum: integer; const def: string): string;
@@ -212,6 +254,19 @@ begin
     Result := te.text
   else
     Result := def;
+end;
+
+function isCmd(e: TTexEntity; const nm: string): Boolean;
+begin
+  Result := Assigned(e) and (e.entType = tetCommand) and (e.text = nm);
+end;
+
+function GetCmd(e: TTexEntity): string;
+begin
+  if Assigned(e) then
+    Result := e.GetCmd
+  else
+    Result := '';
 end;
 
 end.
