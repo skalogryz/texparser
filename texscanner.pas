@@ -1,4 +1,4 @@
-unit texscanner;
+unit TexScanner;
 
 {$mode objfpc}{$H+}
 
