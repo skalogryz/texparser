@@ -84,6 +84,7 @@ function ParseCommandEntity(sc: TTexScanner):TTexEntity;
 var
   done : boolean;
   t  : TTexEntity;
+  ch : char;
 begin
   if (sc = nil) or (sc.token <> ttCommand) then begin
     Result := nil;
@@ -91,6 +92,19 @@ begin
   end;
   Result := TTexEntity.Create(tetCommand);
   Result.text := sc.txt;
+
+  // special case of \verb command
+  if (Result.text = 'verb') or (Result.text = 'verb*') then begin
+    Result.Free;
+
+    Result := TTexEntity.Create(tetText);
+    ch := sc.buf[sc.idx];
+    inc(sc.idx);
+    Result.text := ScanTo(sc.buf, sc.idx, [ch]);
+    inc(sc.idx);
+    sc.Next;
+    Exit;
+  end;
 
   done := false;
   repeat
