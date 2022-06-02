@@ -6,7 +6,8 @@ uses
   {$IFDEF UNIX}{$IFDEF UseCThreads}
   cthreads,
   {$ENDIF}{$ENDIF}
-  SysUtils, Classes, texscanner, texformat, texparser
+  SysUtils, Classes, texscanner, texformat, texparser, mediawikioutput
+  ,texprocess, texprocessoutput
   { you can add units after this };
 
 procedure Trav(const buf : string);
@@ -57,19 +58,28 @@ end;
 var
   b : string;
   fs : TfileStream;
+  ot : TTexOutput;
+  proc : TTexProcess;
 begin
   if ParamCount=0 then begin
     writeln('please specify the input file');
     exit;
   end;
+  ot := TTexOutput.Create;
   fs := TfileStream.Create(ParamStr(1), fmOpenRead or fmShareDenyNone);
+  proc := TTexProcess.Create;
   try
     SetLength(b, fs.Size);
     if length(b)>0 then
       fs.Read(b[1], length(b));
-    Parse(b);
+    //Parse(b);
+    proc.SetStart(b);
+    WikiOutput(proc, ot);
+    DumpOut(ot);
   finally
+    proc.FRee;
     fs.Free;
+    ot.Free;
   end;
 end.
 
