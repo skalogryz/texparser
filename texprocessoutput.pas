@@ -16,7 +16,7 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure Wr(const s: string);
-    procedure WrLn(const s: string);
+    procedure WrLn(const s: string = '');
   end;
 
   { TTexOutput }
