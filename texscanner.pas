@@ -1,6 +1,6 @@
 unit TexScanner;
 
-{$mode objfpc}{$H+}
+{$mode delphi}{$H+}
 
 interface
 

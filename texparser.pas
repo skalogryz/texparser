@@ -1,5 +1,7 @@
 unit TexParser;
 
+{$mode delphi}{$H+}
+
 interface
 
 uses
