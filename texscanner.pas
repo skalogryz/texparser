@@ -26,18 +26,22 @@ type
   private
     lineNum  : integer;
     lineOfs  : integer;
-  public
     idx      : integer;
     buf      : string;
+  public
 
     token    : TTexToken;
     tokenidx : integer;
+    // todo: line information can be counted separately
     tokenline : integer;
     tokenlineofs : integer;
     txt      : string;
     procedure SetBuffer(const s: string);
     function Next: Boolean;
     function TokenCol: integer;
+    property index    : integer read idx;
+    property buffer   : string read buf;
+    procedure SetIndex(const aidx: integer);
   end;
 
 type
@@ -210,6 +214,42 @@ end;
 function TTexScanner.TokenCol: integer;
 begin
   Result := tokenidx - tokenlineofs+1;
+end;
+
+procedure TTexScanner.SetIndex(const aidx: integer);
+var
+  d  : integer;
+  ln : integer;
+  lastln :integer;
+  i : integer;
+begin
+  if idx = aidx then Exit;
+  if idx > aidx then d:=-1 else d:=1;
+  ln:=0;
+  while idx<>aidx do begin
+    if (buf[idx] in EolnChars) then begin
+      inc(ln);
+      inc(idx,d);
+      lastln := idx+d;
+      if (idx>0) and (idx<=length(buf)) and (buf[idx] in EolnChars) and (buf[idx]<>buf[idx-d]) then
+        inc(idx, d);
+      if d>=0 then lastln := idx;
+
+    end;
+    inc(idx,d);
+  end;
+
+  if ln<>0 then begin
+    if d<0 then begin
+      i:=idx;
+      while (i>0) and not (buf[i] in EolnChars) do
+        dec(i);
+      lineOfs := i+1;
+    end else
+      lineOfs := lastln;
+    lineNum := lineNum + ln* d;
+  end;
+
 end;
 
 end.
