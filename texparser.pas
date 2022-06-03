@@ -142,8 +142,6 @@ begin
   end;
 
   if oneCommand then begin
-    while (sc.token = ttLineBreak) do
-      sc.Next;
     if (sc.token = ttCommand) then begin
       Result := ParseCommandEntity(sc);
       Exit;
@@ -163,6 +161,8 @@ begin
     case sc.token of
       ttCommand: begin
         tx := ParseCommandEntity(sc);
+        if sc.token = ttLineBreak then
+          sc.Next;
       end;
       ttCrOpen: begin
         sc.Next;
