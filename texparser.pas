@@ -120,7 +120,7 @@ begin
     sc.SetIndex(sc.index+1);
     i:=sc.index;
     Result.text := ScanTo(sc.buffer, i, [ch]);
-    sc.SetIndex(i);
+    sc.SetIndex(i+1);
     sc.Next;
     Exit;
   end;
