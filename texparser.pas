@@ -11,7 +11,8 @@ uses
 type
   TTexEntityType = (
     tetCommand,   // .text - contains the command. without "/"
-    tetLineBreak, // .text - is empty. Only generated for an empty line
+    tetLineBreak, // .text - is empty. created by TexProcessor
+    tetParagraph, // .text - is empty. Only generated for an empty line
     tetText,      // .text - the actual text
     tetSubObj     // - the "sub" indicates the sequence contained within {}
   );
@@ -29,6 +30,7 @@ type
     opts : TList;
     args : TList;
     constructor Create(AType: TTexEntityType);
+    constructor CreateText(const aText: string);
     destructor Destroy; override;
 
     function GetCmd: string;
@@ -178,6 +180,8 @@ begin
     case sc.token of
       ttCommand: begin
         tx := ParseCommandEntity(sc);
+        if sc.token = ttLineBreak then
+          sc.Next;
       end;
       ttCrOpen: begin
         sc.Next;
@@ -206,15 +210,18 @@ begin
       ttLineBreak: begin
         if oneCommand then begin
           done := true;
-          if not Assigned(pr) then
-            tx := TTexEntity.Create(tetLineBreak);
+          {if not Assigned(pr) then
+            tx := TTexEntity.Create(tetParagraph)
+          else}
+          tx := TTexEntity.Create(tetLineBreak);
         end else begin
           if lb = 0 then inc(lb)
-          else tx := TTexEntity.Create(tetLineBreak);
+          else tx := TTexEntity.Create(tetParagraph);
         end;
         sc.Next;
       end;
       ttText: begin
+        done := oneCommand;
         tx := TTexEntity.Create(tetText);
         tx.text := sc.txt;
         sc.Next;
@@ -270,6 +277,12 @@ begin
     opts := TList.Create; // of TTexEntity
     args := TList.Create; // of TTexEntity
   end;
+end;
+
+constructor TTexEntity.CreateText(const aText: string);
+begin
+  Create(tetText);
+  text:=aText;
 end;
 
 destructor TTexEntity.Destroy;
