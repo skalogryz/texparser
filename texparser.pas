@@ -84,12 +84,12 @@ var
 const
   endVerb = '\end{verbatim}';
 begin
-  i := PosEx(endVerb, sc.buffer, sc.index);
+  i := PosEx(endVerb, sc.buffer, sc.tokenidx);
   if i<=0 then begin
     Result := '';
     Exit;
   end;
-  Result := Copy(sc.buffer, sc.index, i-sc.index);
+  Result := Copy(sc.buffer, sc.tokenidx, i-sc.tokenidx);
   sc.SetIndex( i + length(endVerb) );
   // should be at the eoln right now
   sc.Next;
