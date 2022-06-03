@@ -10,6 +10,7 @@ uses
 type
   TWikiOutOptions = class(TObject)
   public
+    sourceType : string;
   end;
 
 procedure WikiOutput(proc: TTexProcess; ot: TTexOutput; opt: TWikiOutOptions = nil);
@@ -54,20 +55,26 @@ begin
         f.Wr(e.ArgText(0));
         f.WrLn('===');
       end else if (cmd = 'begin') and (e.ArgText(0)='verbatim') then begin
-        f.Wr('<code>');
+        f.Wr('<source');
+        if opt.sourceType<>'' then begin
+          f.Wr(' lang="');
+          f.Wr(opt.sourceType);
+          f.wr('"');
+        end;
+        f.Wr('>');
         f.Wr(e.OptText(0));
-        f.WrLn('</code>');
+        f.WrLn('</source>');
       end else if cmd<>'' then begin
-        f.Wr('@@');
-        f.Wr(cmd);
-        f.Wr('@@');
+        //f.Wr('@@');
+        //f.Wr(cmd);
+        //f.Wr('@@');
+      end else if e.entType = tetLineBreak then begin
+        f.WrLn();
+      end else if e.entType = tetParagraph then begin
+        f.WrLn();
       end else if e.entType = tetText then begin
         t := e;
-        while Assigned(t) do begin
-          if (t.entType = tetText) then f.Wr(t.text);
-          t := t.next;
-        end;
-        f.WrLn;
+        f.Wr(t.text);
       end;
       //end;
     until not Assigned(e);
