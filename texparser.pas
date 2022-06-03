@@ -46,7 +46,16 @@ type
 function ParseNextEntity(sc: TTexScanner; oneCommand: Boolean; closeChar : char = #0): TTexEntity;
 
 type
-  ETexParse = class(Exception);
+
+  { ETexParse }
+
+  ETexParse = class(Exception)
+  public
+    line : integer;
+    col  : integer;
+    constructor Create(sc: TTexScanner; const msg: string);
+    constructor CreateExp(sc: TTexScanner; const expChar: string);
+  end;
 
 function isBeginVerbatim(e: TTexEntity): Boolean;
 function SkipVerbating(sc: TTexScanner): string;
@@ -71,15 +80,17 @@ var
 const
   endVerb = '\end{verbatim}';
 begin
-  i := PosEx(endVerb, sc.buf, sc.idx);
+  i := PosEx(endVerb, sc.buffer, sc.index);
   if i<=0 then begin
     Result := '';
     Exit;
   end;
-  Result := Copy(sc.buf, sc.idx, i-sc.idx);
-  //todo: this kills the line counter in the scanner
-  sc.idx := i + length(endVerb);
-  SkipEoln(sc.buf, sc.idx);
+  Result := Copy(sc.buffer, sc.index, i-sc.index);
+  sc.SetIndex( i + length(endVerb) );
+  // should be at the eoln right now
+  sc.Next;
+  //sc.idx := ;
+  //SkipEoln(sc.buf, sc.idx);
 end;
 
 function ParseCommandEntity(sc: TTexScanner):TTexEntity;
@@ -87,6 +98,7 @@ var
   done : boolean;
   t  : TTexEntity;
   ch : char;
+  i  : integer;
 begin
   if (sc = nil) or (sc.token <> ttCommand) then begin
     Result := nil;
@@ -100,10 +112,11 @@ begin
     Result.Free;
 
     Result := TTexEntity.Create(tetText);
-    ch := sc.buf[sc.idx];
-    inc(sc.idx);
-    Result.text := ScanTo(sc.buf, sc.idx, [ch]);
-    inc(sc.idx);
+    ch := sc.buffer[sc.index];
+    sc.SetIndex(sc.index+1);
+    i:=sc.index;
+    Result.text := ScanTo(sc.buffer, i, [ch]);
+    sc.SetIndex(i);
     sc.Next;
     Exit;
   end;
@@ -116,13 +129,13 @@ begin
       t := ParseNextEntity(sc, false);
       if Assigned(t) then Result.args.Add (t);
       if sc.token<>ttCrClose then
-        raise ETexParse.Create('expected }, but '+sc.txt+' found');
+        raise ETexParse.CreateExp(sc, '}');
     end else if (sc.token=ttBrOpen) then begin
       sc.Next;
       t := ParseNextEntity(sc, false, ']');
       if Assigned(t) then Result.opts.Add (t);
       if sc.token<>ttBrClose then
-        raise ETexParse.Create('expected ], but '+sc.txt+' found');
+        raise ETexParse.CreateExp(sc, ']');
     end else
       done := true;
   until done;
@@ -144,6 +157,8 @@ begin
   if oneCommand then begin
     if (sc.token = ttCommand) then begin
       Result := ParseCommandEntity(sc);
+      if sc.token = ttLineBreak then
+        sc.Next;
       Exit;
     end;
   end;
@@ -154,27 +169,25 @@ begin
   lb := 0;
   while not done do begin
     tx := nil;
-    if (closeChar<>#0) and (sc.buf[sc.tokenidx]=closeChar) then begin
+    if (closeChar<>#0) and (sc.buffer[sc.tokenidx]=closeChar) then begin
       done := true;
       break;
     end;
     case sc.token of
       ttCommand: begin
         tx := ParseCommandEntity(sc);
-        if sc.token = ttLineBreak then
-          sc.Next;
       end;
       ttCrOpen: begin
         sc.Next;
         tx := TTexEntity.Create(tetSubObj);
         tx.sub := ParseNextEntity(sc, false);
         if sc.token <> ttCrClose then
-          raise ETexParse.Create('expected }, but '+sc.txt+' found');
+          raise ETexParse.CreateExp(sc, '}');
         sc.Next;
       end;
       ttBrOpen, ttBrClose: begin
         tx := TTexEntity.Create(tetText);
-        tx.text := Copy(sc.buf, sc.tokenidx, 1);
+        tx.text := Copy(sc.buffer, sc.tokenidx, 1);
         sc.Next;
       end;
       ttCrClose: begin
@@ -215,6 +228,34 @@ begin
     end;
   end;
   Result := rt;
+end;
+
+{ ETexParse }
+
+constructor ETexParse.Create(sc: TTexScanner; const msg: string);
+begin
+  if Assigned(sc) then begin
+    line := sc.tokenline;
+    col := sc.TokenCol;
+  end;
+  inherited Create(format('[%d:%d] %s', [line,col, msg]));
+end;
+
+constructor ETexParse.CreateExp(sc: TTexScanner; const expChar: string);
+var
+  t: string;
+begin
+  t:='';
+  if sc.txt = '' then begin
+    case sc.token of
+      ttLineBreak: t := 'like-break';
+      ttEof: t := 'end of file';
+    else
+      t := 'something-else';
+    end;
+  end else
+    t := '"'+sc.txt+'"';
+  Create(Sc, 'expected "'+expChar+'", but '+t+' found');
 end;
 
 { TTexEntity }
